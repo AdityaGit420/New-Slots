@@ -2,132 +2,64 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Slot AI Agent</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agent Chat</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .chat-container {
-      width: 400px;
-      height: 600px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .chat-header {
-      background: #2563eb;
-      color: white;
-      padding: 15px;
-      font-size: 18px;
-      font-weight: bold;
-      text-align: center;
-    }
-    .chat-box {
-      flex: 1;
-      padding: 15px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .message {
-      padding: 10px 14px;
-      border-radius: 10px;
-      max-width: 80%;
-    }
-    .user-message {
-      align-self: flex-end;
-      background: #2563eb;
-      color: white;
-    }
-    .bot-message {
-      align-self: flex-start;
-      background: #e5e7eb;
-      color: black;
-    }
-    .chat-input {
-      display: flex;
-      padding: 10px;
-      border-top: 1px solid #ddd;
-    }
-    .chat-input input {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-    .chat-input button {
-      margin-left: 10px;
-      padding: 10px 16px;
-      background: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .chat-input button:hover {
-      background: #1e40af;
-    }
+    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 0; }
+    #chat-container { width: 400px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; }
+    #messages { height: 400px; overflow-y: auto; padding: 10px; border-bottom: 1px solid #ddd; }
+    .msg { margin: 8px 0; padding: 10px; border-radius: 6px; }
+    .user { background: #007bff; color: #fff; text-align: right; }
+    .bot { background: #eee; color: #333; text-align: left; }
+    #input-container { display: flex; }
+    #user-input { flex: 1; padding: 10px; border: none; border-top: 1px solid #ddd; }
+    #send-btn { padding: 10px 20px; border: none; background: #007bff; color: #fff; cursor: pointer; }
+    #send-btn:hover { background: #0056b3; }
   </style>
 </head>
 <body>
-  <div class="chat-container">
-    <div class="chat-header">🎰 Slot AI Agent</div>
-    <div class="chat-box" id="chatBox"></div>
-    <div class="chat-input">
-      <input id="userInput" type="text" placeholder="Ask about slots..." />
-      <button onclick="sendMessage()">Send</button>
+  <div id="chat-container">
+    <div id="messages"></div>
+    <div id="input-container">
+      <input id="user-input" type="text" placeholder="Type your message..." />
+      <button id="send-btn">Send</button>
     </div>
   </div>
 
   <script>
-    const chatBox = document.getElementById("chatBox");
-    const webhookUrl = "http://your-app.onrender.com:5678/webhook/1eb127a7-7f3e-4796-9338-e675a849a641"; // your n8n webhook URL
-    const authHeader = "Basic " + btoa("admin:strongpassword"); // replace with your n8n credentials
+    const messagesDiv = document.getElementById("messages");
+    const input = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+
+    // 👇 replace with your n8n webhook production URL
+    const N8N_WEBHOOK_URL = "http://your-app.onrender.com:5678/webhook/1eb127a7-7f3e-4796-9338-e675a849a641";
 
     function addMessage(text, sender) {
       const msg = document.createElement("div");
-      msg.classList.add("message", sender === "user" ? "user-message" : "bot-message");
-      msg.innerText = text;
-      chatBox.appendChild(msg);
-      chatBox.scrollTop = chatBox.scrollHeight;
+      msg.classList.add("msg", sender);
+      msg.textContent = text;
+      messagesDiv.appendChild(msg);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    async function sendMessage() {
-      const input = document.getElementById("userInput");
-      const message = input.value.trim();
-      if (!message) return;
-      
-      addMessage(message, "user");
+    sendBtn.addEventListener("click", async () => {
+      const text = input.value.trim();
+      if (!text) return;
+      addMessage(text, "user");
       input.value = "";
 
       try {
-        const response = await fetch(webhookUrl, {
+        const res = await fetch(N8N_WEBHOOK_URL, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": authHeader
-          },
-          body: JSON.stringify({ question: message })
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
         });
-
-        const result = await response.json();
-        addMessage(result.reply || JSON.stringify(result), "bot");
-      } catch (error) {
-        addMessage("⚠️ Error: Could not reach server", "bot");
+        const data = await res.json();
+        addMessage(data.reply || JSON.stringify(data), "bot");
+      } catch (err) {
+        addMessage("❌ Error connecting to n8n server", "bot");
       }
-    }
+    });
   </script>
 </body>
 </html>
